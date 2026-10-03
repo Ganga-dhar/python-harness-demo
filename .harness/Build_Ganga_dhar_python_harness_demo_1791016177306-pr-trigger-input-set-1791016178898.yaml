@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_Ganga_dhar_python_harness_demo_1791016177306-pr-trigger-input-set
+  identifier: Build_Ganga_dhar_python_harness_demo_1791016177306prtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: PythonHarnessDemo
+  pipeline:
+    identifier: Build_Ganga_dhar_python_harness_demo_1791016177306
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
