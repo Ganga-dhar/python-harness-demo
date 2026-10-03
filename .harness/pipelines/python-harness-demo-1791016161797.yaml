@@ -79,11 +79,13 @@ pipeline:
               - step:
                   identifier: dockerbuildandpush
                   name: Docker Build and Push to ECR
-                  type: BuildAndPushDockerRegistry
+                  type: BuildAndPushECR
                   timeout: 20m
                   spec:
                     connectorRef: AWSConnector
-                    repo: 730335304128.dkr.ecr.us-east-1.amazonaws.com/python-harness-demo
+                    region: us-east-1
+                    account: "730335304128"
+                    imageName: python-harness-demo
                     tags:
                       - latest
                       - <+pipeline.sequenceId>
