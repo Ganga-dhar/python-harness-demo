@@ -3,59 +3,38 @@ pipeline:
   identifier: python_harness_demo
   projectIdentifier: Python_Harness_Demo
   orgIdentifier: default
-  tags: {}
 
   stages:
     - stage:
         name: Python CI
         identifier: python_ci
+        description: "Build and test Python application"
         type: CI
+
         spec:
           cloneCodebase: true
-
-          infrastructure:
-            type: KubernetesDirect
-            spec:
-              connectorRef: <HARNESS_KUBERNETES_CONNECTOR>
-              namespace: harness-delegate-ng
-              automountServiceAccountToken: true
-              nodeSelector: {}
-              os: Linux
 
           execution:
             steps:
 
               - step:
                   type: Run
-                  name: Python Version
-                  identifier: python_version
+                  name: Install Dependencies
+                  identifier: install_dependencies
+
                   spec:
-                    connectorRef: <DOCKER_CONNECTOR>
-                    image: python:3.12-slim
                     shell: Sh
                     command: |
                       python --version
                       pip --version
+                      pip install -r requirements.txt
 
               - step:
                   type: Run
-                  name: Install Dependencies
-                  identifier: install_dependencies
-                  spec:
-                    connectorRef: <DOCKER_CONNECTOR>
-                    image: python:3.12-slim
-                    shell: Sh
-                    command: |
-                      pip install --no-cache-dir -r requirements.txt
+                  name: Run Tests
+                  identifier: run_tests
 
-              - step:
-                  type: Run
-                  name: Run Unit Tests
-                  identifier: run_unit_tests
                   spec:
-                    connectorRef: <DOCKER_CONNECTOR>
-                    image: python:3.12-slim
                     shell: Sh
                     command: |
-                      pip install --no-cache-dir -r requirements.txt
                       pytest -v
