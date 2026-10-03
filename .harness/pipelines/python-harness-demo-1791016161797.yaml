@@ -1,8 +1,11 @@
 pipeline:
   identifier: Build_Ganga_dhar_python_harness_demo_1791016177306
   name: Build python-harness-demo
+  description: Builds Python app, runs Trivy security scan, and pushes to ECR
   orgIdentifier: default
   projectIdentifier: PythonHarnessDemo
+  tags:
+    ai_generated: ""
   properties:
     ci:
       codebase:
@@ -77,8 +80,50 @@ pipeline:
 
                       echo "All tests passed."
               - step:
-                  identifier: dockerbuildandpush
-                  name: Docker Build and Push to ECR
+                  identifier: dockerbuild
+                  name: Docker Build
+                  type: Run
+                  timeout: 20m
+                  spec:
+                    command: |-
+                      echo "Building Docker image..."
+                      docker build -t python-harness-demo:<+pipeline.sequenceId> -f Dockerfile .
+                      echo "Docker image built: python-harness-demo:<+pipeline.sequenceId>"
+              - step:
+                  identifier: trivyimagescan
+                  name: Trivy Container Image Scan
+                  type: Run
+                  timeout: 15m
+                  spec:
+                    shell: Sh
+                    command: |-
+                      set -e
+
+                      echo "Installing Trivy..."
+
+                      apt-get update
+                      apt-get install -y wget apt-transport-https gnupg
+
+                      wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+                        | gpg --dearmor \
+                        | tee /usr/share/keyrings/trivy.gpg > /dev/null
+
+                      echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+                        | tee /etc/apt/sources.list.d/trivy.list
+
+                      apt-get update
+                      apt-get install -y trivy
+
+                      echo "Running Trivy image scan..."
+
+                      trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 1 \
+                        --ignore-unfixed \
+                        python-harness-demo:<+pipeline.sequenceId>
+              - step:
+                  identifier: pushtoECR
+                  name: Push Docker Image to Amazon ECR
                   type: BuildAndPushECR
                   timeout: 20m
                   spec:
@@ -87,10 +132,10 @@ pipeline:
                     account: "730335304128"
                     imageName: python-harness-demo
                     tags:
-                      - latest
                       - <+pipeline.sequenceId>
                     dockerfile: Dockerfile
                     context: .
+                    caching: false
           platform:
             os: Linux
             arch: Amd64
