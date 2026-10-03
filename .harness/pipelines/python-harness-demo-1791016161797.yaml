@@ -1,8 +1,11 @@
 pipeline:
   identifier: Build_Ganga_dhar_python_harness_demo_1791016177306
   name: Build python-harness-demo
+  description: Builds Python app, runs Trivy security scan, and pushes to ECR
   orgIdentifier: default
   projectIdentifier: PythonHarnessDemo
+  tags:
+    ai_generated: ""
   properties:
     ci:
       codebase:
@@ -79,16 +82,13 @@ pipeline:
               - step:
                   identifier: dockerbuild
                   name: Docker Build
-                  type: BuildAndPushDockerRegistry
+                  type: Run
                   timeout: 20m
                   spec:
-                    connectorRef: AWSConnector
-                    repo: python-harness-demo
-                    tags:
-                      - <+pipeline.sequenceId>
-                    dockerfile: Dockerfile
-                    context: .
-                    buildArgs: {}
+                    command: |-
+                      echo "Building Docker image..."
+                      docker build -t python-harness-demo:<+pipeline.sequenceId> -f Dockerfile .
+                      echo "Docker image built: python-harness-demo:<+pipeline.sequenceId>"
               - step:
                   identifier: trivyimagescan
                   name: Trivy Container Image Scan
