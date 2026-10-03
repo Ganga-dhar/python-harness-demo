@@ -1,40 +1,99 @@
 pipeline:
-  name: python-harness-demo
-  identifier: python_harness_demo
-  projectIdentifier: Python_Harness_Demo
+  identifier: Build_Ganga_dhar_python_harness_demo_1791016177306
+  name: Build python-harness-demo
   orgIdentifier: default
-
+  projectIdentifier: PythonHarnessDemo
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: account.Github_OAuth_1791009970988
+        repoName: Ganga-dhar/python-harness-demo
   stages:
     - stage:
-        name: Python CI
-        identifier: python_ci
-        description: "Build and test Python application"
+        identifier: build
+        name: build
         type: CI
-
         spec:
           cloneCodebase: true
-
+          caching:
+            enabled: true
           execution:
             steps:
-
               - step:
+                  identifier: setupvirtualenvironment
+                  name: setup virtual environment
                   type: Run
-                  name: Install Dependencies
-                  identifier: install_dependencies
-
+                  timeout: ""
                   spec:
-                    shell: Sh
-                    command: |
-                      python --version
-                      pip --version
-                      pip install -r requirements.txt
+                    command: |-
+                      set -e
 
+                      echo "Creating Python virtual environment..."
+
+                      python3 -m venv .venv
+
+                      . .venv/bin/activate
+
+                      echo "Upgrading pip..."
+
+                      python3 -m pip install --upgrade pip
+
+                      echo "Installing dependencies..."
+
+                      python3 -m pip install -r requirements.txt
+
+                      echo "Python environment ready."
               - step:
+                  identifier: runlinter
+                  name: run linter
                   type: Run
-                  name: Run Tests
-                  identifier: run_tests
-
+                  timeout: ""
                   spec:
-                    shell: Sh
-                    command: |
+                    command: |-
+                      set -e
+
+                      echo "Running Flake8..."
+
+                      . .venv/bin/activate
+
+                      flake8 . --exclude=venv,.venv
+
+                      echo "Flake8 passed."
+              - step:
+                  identifier: runtests
+                  name: run tests
+                  type: Run
+                  timeout: ""
+                  spec:
+                    command: |-
+                      set -e
+
+                      echo "Running Python unit tests..."
+
+                      . .venv/bin/activate
+
                       pytest -v
+
+                      echo "All tests passed."
+              - step:
+                  identifier: dockerbuildandpush
+                  name: Docker Build and Push to ECR
+                  type: BuildAndPushECR
+                  timeout: 20m
+                  spec:
+                    connectorRef: AWSConnector
+                    region: us-east-1
+                    account: "730335304128"
+                    imageName: python-harness-demo
+                    tags:
+                      - latest
+                      - <+pipeline.sequenceId>
+                    dockerfile: Dockerfile
+                    context: .
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
