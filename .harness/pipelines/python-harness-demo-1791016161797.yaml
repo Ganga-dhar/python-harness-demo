@@ -13,47 +13,87 @@ pipeline:
     - stage:
         identifier: build
         name: build
+        type: CI
         spec:
+          cloneCodebase: true
           caching:
             enabled: true
-          cloneCodebase: true
           execution:
             steps:
               - step:
-                  identifier: runlinter
-                  name: run linter
-                  spec:
-                    command: |-
-                      pip install flake8
-                      flake8 . --exclude=venv
-                  timeout: ""
-                  type: Run
-              - step:
                   identifier: setupvirtualenvironment
                   name: setup virtual environment
+                  type: Run
+                  timeout: ""
                   spec:
                     command: |-
+                      set -e
+
+                      echo "Creating Python virtual environment..."
+
                       python3 -m venv .venv
+
                       . .venv/bin/activate
+
+                      echo "Upgrading pip..."
+
+                      python3 -m pip install --upgrade pip
+
+                      echo "Installing dependencies..."
+
                       python3 -m pip install -r requirements.txt
-                      python3 -m pip install -e .
-                  timeout: ""
-                  type: Run
+
+                      echo "Python environment ready."
               - step:
-                  identifier: dockerbuild
-                  name: docker_build
+                  identifier: runlinter
+                  name: run linter
+                  type: Run
+                  timeout: ""
                   spec:
-                    caching: true
-                    connectorRef: <+input>
-                    repo: hello/world
+                    command: |-
+                      set -e
+
+                      echo "Running Flake8..."
+
+                      . .venv/bin/activate
+
+                      flake8 . --exclude=venv,.venv
+
+                      echo "Flake8 passed."
+              - step:
+                  identifier: runtests
+                  name: run tests
+                  type: Run
+                  timeout: ""
+                  spec:
+                    command: |-
+                      set -e
+
+                      echo "Running Python unit tests..."
+
+                      . .venv/bin/activate
+
+                      pytest -v
+
+                      echo "All tests passed."
+              - step:
+                  identifier: dockerbuildandpush
+                  name: Docker Build and Push to ECR
+                  type: BuildAndPushECR
+                  timeout: 20m
+                  spec:
+                    connectorRef: AWSConnector
+                    region: us-east-1
+                    account: "730335304128"
+                    imageName: python-harness-demo
                     tags:
                       - latest
-                  timeout: ""
-                  type: BuildAndPushDockerRegistry
+                      - <+pipeline.sequenceId>
+                    dockerfile: Dockerfile
+                    context: .
           platform:
-            arch: Amd64
             os: Linux
+            arch: Amd64
           runtime:
-            spec: {}
             type: Cloud
-        type: CI
+            spec: {}
